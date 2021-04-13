@@ -1,4 +1,5 @@
 from discord.ext import commands
+import discord
 from web_crawler.opgg_crawler import OpggCrawler
 
 
@@ -13,20 +14,43 @@ class LolCommands(commands.Cog):
         msg = ctx.message.content
         await ctx.send(self.opgg.get_champion_url(msg.split("$build")[1]))
 
+    @staticmethod
+    def create_summoner_embed(summoner, n_champs=3):
+        em = discord.Embed(title=summoner.elo, description=summoner.win_ratio, color=0xf3841b)
+        em.set_author(name=summoner.name, icon_url=summoner.profile_icon)
+        em.set_thumbnail(url=summoner.elo_icon)
+        for champ in summoner.most_played_champs[0:n_champs]:
+            em.add_field(name=champ.name + f" ({champ.games})", value=f"**CS:** {champ.cs}  **KDA:** {champ.kda}  **WR:** {champ.win_ratio}", inline=False)
+        em.set_footer(text=summoner.ladder_rank)
+        return em
+
     @commands.command(pass_context=True)
     async def lol(self, ctx):
         msgs = ctx.message.content.split()
 
+        # When not enough arguments were passed
+        if len(msgs) <= 1:
+            return
+
         if msgs[1] == "west" or msgs[1] == "euwest":
             msgs[1] = "euw"
-        lol_server = msgs[1] if msgs[1] in self.opgg.servers else "eune"
 
-        await ctx.send(
-            content=None,
-            embed=await self.opgg.fetch_summoner(
-                summoner_name="".join(msgs[2:]), server=lol_server
-            ),
-        )
+        if msgs[1] not in self.opgg.servers:
+            lol_server = "eune"
+        elif msgs[1] in self.opgg.servers:
+            # Check if user put only the server e.g: "$lol euw"
+            if len(msgs) == 2:
+                return
+            lol_server = msgs[1]
+
+        # Fetch summoner data
+        summoner = await self.opgg.fetch_summoner(summoner_name="".join(msgs[1:]), server=lol_server)
+
+        # Format them into emded
+        em = LolCommands.create_summoner_embed(summoner)
+
+        # Send the embed to the server.
+        await ctx.send(content=None, embed=em)
 
 
 def setup(bot):

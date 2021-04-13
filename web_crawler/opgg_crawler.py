@@ -1,9 +1,31 @@
 # import requests
 import aiohttp
-import discord
 from decouple import config
+from dataclasses import dataclass
 import utils.utils as ut
 from bs4 import BeautifulSoup
+
+
+@dataclass(frozen=True, order=True)
+class Champion:
+    name: str
+    icon: str
+    win_ratio: str
+    kda: str
+    cs: str
+    games: str
+
+
+@dataclass(frozen=True, order=True)
+class Summoner:
+    name: str
+    elo: str
+    win_ratio: str
+    profile_icon: str
+    elo_icon: str
+    server: str
+    ladder_rank: str
+    most_played_champs: list
 
 
 class OpggCrawler:
@@ -11,9 +33,12 @@ class OpggCrawler:
     def __init__(self):
         # The empty one -> '' is kr.
         self.servers = ["eune", "euw", "na", '', "oce", "br", "tr"]
-        self.base_URL = config("BASE_URL")
-        self.summoner_base_URL = config("SUMMONER_BASE_URL")
-        self.champion_base_URL = config("CHAMPION_BASE_URL")
+        self.base_url = config("OPGG_BASE_URL")
+        self.summoner_url = config("OPGG_SUMMONER_URL")
+        self.champion_url = config("OPGG_CHAMPION_URL")
+        self.profile_icons = config("OPGG_PROFILE_ICON_URL")
+        self.elo_icons_url = config("OPGG_ELO_ICON_URL")
+        self.champion_icon_url = config("OPGG_CHAMPION_ICON_URL")
 
     @staticmethod
     async def fetch(url):
@@ -22,41 +47,95 @@ class OpggCrawler:
             html = await response.text()
             return html
 
-    async def fetch_summoner(self, summoner_name, server="eune"):
+    @staticmethod
+    def find_kda(kda_soup):
+        kda_each = kda_soup.find("div", class_="KDAEach")
+        kill = kda_each.find("span", class_="Kill").text
+        death = kda_each.find("span", class_="Death").text
+        assist = kda_each.find("span", class_="Assist").text
+        return f"{kill} / {death} / {assist}"
+
+    @staticmethod
+    def find_played(played_soup):
+        win_ratio = ut.rspaces(played_soup.find("div", class_="WinRatio").text)
+        games = played_soup.find("div", class_="Title").text.replace("Played", "Games")
+        return {"win_ratio": win_ratio, "games": games}
+
+    @staticmethod
+    def find_champions(soup):
+        champions = list()
+        if soup.find(class_="MostChampionContent") is not None:
+            most_played_champs = soup.find_all("div", class_=lambda class_: class_ and "ChampionBox" in class_)
+            for champ_box in most_played_champs:
+                c_name = champ_box.find("div", class_="ChampionName")['title']
+                c_icon = 'https:' + champ_box.find("div", class_="Face").a.img['src']
+                c_played = OpggCrawler.find_played(champ_box.find("div", class_="Played"))
+                c_kda = OpggCrawler.find_kda(champ_box.find("div", class_="PersonalKDA"))
+                c_cs = ut.rss(champ_box.find("div", class_="ChampionMinionKill").text).split()[1]
+                champions.append(Champion(name=c_name, icon=c_icon, win_ratio=c_played["win_ratio"], games=c_played["games"], kda=c_kda, cs=c_cs))
+        return champions
+
+    @staticmethod
+    def find_ladder_rank(soup):
+        ladder_con = soup.find("div", class_="LadderRank")
+        if ladder_con is not None:
+            top = ut.rss(ladder_con.a.contents[2])
+            ranking = ladder_con.a.span.text
+            ladder_rank = f"Ladder Rank {ranking} {top}"
+        else:
+            ladder_rank = ""
+        return ladder_rank
+
+    @staticmethod
+    def find_win_ratio(tier_box):
+        wins = tier_box.find("span", class_="wins").text
+        losses = tier_box.find("span", class_="losses").text
+        winratio = tier_box.find("span", class_="winratio").text
+        return f"{wins} {losses} ({winratio})"
+
+    @staticmethod
+    def find_tier_box(soup):
+        tier_box = soup.find("div", class_="TierBox")
+        tier_info = tier_box.find("div", class_="TierInfo")
+        img = tier_box.find("div", class_="Medal").img['src']
+        elo = tier_box.find("div", class_="TierRank").text
+        win_ratio = ""
+
+        if elo != "Unranked":
+            elo += " " + ut.rss(tier_info.find("span", class_="LeaguePoints").text)
+            win_ratio = OpggCrawler.find_win_ratio(tier_info)
+
+        return {"elo_icon": "http:" + img, "win_ratio": win_ratio, "elo": elo}
+
+    async def fetch_summoner(self, summoner_name, server="eune", rank_type="Ranked Solo"):
         print("summoner: " + summoner_name)
         print("server: " + server)
-        em = discord.Embed(title="Ranked Solo", color=0xfc9e1b)
-        em.set_image(url="https://ibb.co/KyqZ2s6")
-        em.add_field(name=u'🎯:regional_indicator_e::regional_indicator_l::regional_indicator_o:  Rank', value="Elaaaa", inline=False)
-        # em.add_field(name=u'🎯 Rank', icon_url="https://imgur.com/MvVwRod", inline=False, )
-        return em
-        # em.add_field(name=u'\u2328 Most Used Cmd', value=most_used_cmd, inline=False)
-        # em.add_field(name=u'\U0001F4E4 Msgs sent', value=str(self.bot.icount))
-        # em.add_field(name=u'\U0001F4E5 Msgs received', value=str(self.bot.message_count))
-        # em.add_field(name=u'\u2757 Mentions', value=str(self.bot.mention_count))
-        # em.add_field(name=u'\u2694 Servers', value=str(len(self.bot.guilds)))
-        # em.add_field(name=u'\ud83d\udcd1 Channels', value=str(channel_count))
-        # em.add_field(name=u'\u270F Keywords logged', value=str(self.bot.keyword_log))
-        # g = u'\U0001F3AE Game'
-        # if '=' in game: g = '\ud83c\udfa5 Stream'
-        # em.add_field(name=g, value=game)
-
-
-#             em.add_field(name='\ud83d\udd17 Link to download',
-#                          value='[Github link](https://github.com/appu1232/Discord-Selfbot/tree/master)')
-#             em.add_field(name='\ud83c\udfa5Quick examples:', value='[Simple commands](http://i.imgur.com/3H9zpop.gif)')
-#             if txt == 'link': em.add_field(name='👋 Discord Server', value='Join the official Discord server [here](https://discord.gg/FGnM5DM)!')
-#             em.set_footer(text='Made by appu1232#2569', icon_url='https://i.imgur.com/RHagTDg.png')
-#             await ctx.send(content=None, embed=em)
-#         else:
-        page = await self.fetch(self.summoner_base_URL.replace("$SERVER", server.lower()) + summoner_name.replace(' ', '%20'))
-        # page = await self.fetch("https://eune.op.gg/summoner/userName=Cloud%20Madness")
+        page = await self.fetch(self.summoner_url.replace("$SERVER", server.lower()) + summoner_name.replace(' ', '%20'))
         soup = BeautifulSoup(page, "html.parser")
-        try:
-            text = soup.find(class_="TierRankInfo").text
-        except Exception:
-            pass
-        return ut.format_summoner(summoner_name, "".join([text]))
+
+        # Most played champions
+        champions = OpggCrawler.find_champions(soup)
+
+        # Ladder Rank
+        ladder_rank = OpggCrawler.find_ladder_rank(soup)
+
+        # Summoner Icon
+        profile_icon = "http:" + soup.find("img", class_="ProfileImage")['src']
+
+        # Elo Icon / WinRatio / Elo
+        tier = OpggCrawler.find_tier_box(soup)
+
+        # summoner = Summoner(name=summoner_name, server=server)
+        return Summoner(
+            name=summoner_name,
+            elo=tier["elo"],
+            win_ratio=tier["win_ratio"],
+            profile_icon=profile_icon,
+            elo_icon=tier["elo_icon"],
+            server=server,
+            ladder_rank=ladder_rank,
+            most_played_champs=champions)
 
     def get_champion_url(self, champion):
-        return self.champion_base_URL.replace("$CHAMPION", champion.lower().replace(' ', ''))
+        pass
+        # return self.champion_url.replace("$CHAMPION", champion.lower().replace(' ', ''))

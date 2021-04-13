@@ -1,5 +1,9 @@
-def remove_spaces(text):
+def rspaces(text):
     return "".join(text.split())
+
+
+def rss(text):
+    return text.replace("\n", "").replace("\t", "")
 
 
 # Bold Text
