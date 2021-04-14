@@ -1,9 +1,10 @@
 from decouple import config
 from discord.ext import commands
+import utils.utils as ut
 from web_crawler.opgg_crawler import OpggCrawler
 
 cogs_list = ["cogs.lolcommands"]
-trolled_users = ["Balkanios#0651"]
+trolled_users = ['Balkanios#0651', 'Cloud#2687']
 
 
 async def on_ready(self):
@@ -15,9 +16,6 @@ async def on_message(self, message):
         return
 
     if message.content.startswith("$lol"):
-        # trolled = await troll_users(message)
-        # if trolled is True:
-        #     return
         info = await self.opgg_crawler.fetch_summoner(
             message.content.split("$lol")[1]
         )
@@ -33,6 +31,7 @@ def load_cogs(bot_, cogs_list_):
 
 if __name__ == "__main__":
     crawler = OpggCrawler()
+    ut.setup(trolled_users)
     bot = commands.Bot(description="ChoBot", command_prefix=config("PREFIX"))
 
     load_cogs(bot, cogs_list)

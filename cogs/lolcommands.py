@@ -1,5 +1,6 @@
 from discord.ext import commands
 import discord
+import utils.utils as ut
 from web_crawler.opgg_crawler import OpggCrawler
 
 
@@ -27,6 +28,10 @@ class LolCommands(commands.Cog):
     @commands.command(pass_context=True)
     async def lol(self, ctx):
         msgs = ctx.message.content.split()
+
+        print(str(ctx.message.author))
+        if await ut.troll_user(ctx) is True:
+            return
 
         # When not enough arguments were passed
         if len(msgs) <= 1:
