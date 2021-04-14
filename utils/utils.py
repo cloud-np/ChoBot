@@ -33,7 +33,7 @@ def format_wr(texts):
     return f"{texts[0].replace('W', ':white_check_mark:')} {texts[1].replace('L', ':x:')} {dt(''.join([t + ' ' for t in texts[2:5]]))}"
 
 
-async def troll_user(ctx):
+async def not_found(ctx):
     if rspaces(str(ctx.message.author)) in trolled_users and randint(0, 10) > 1:
         em = discord.Embed(title="Dead", description="Nai paraligo..")
         em.set_image(url="https://i.imgur.com/uclAkDA.png")

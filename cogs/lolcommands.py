@@ -1,4 +1,5 @@
 from discord.ext import commands
+from riot_api.riot_api import RiotApi
 import discord
 import utils.utils as ut
 from web_crawler.opgg_crawler import OpggCrawler
@@ -7,6 +8,7 @@ from web_crawler.opgg_crawler import OpggCrawler
 class LolCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.riot_api = RiotApi()
         self.opgg = OpggCrawler()
 
     @commands.command(pass_context=True)
@@ -29,9 +31,11 @@ class LolCommands(commands.Cog):
     async def lol(self, ctx):
         msgs = ctx.message.content.split()
 
-        print(str(ctx.message.author))
-        if await ut.troll_user(ctx) is True:
-            return
+        await ctx.send(u":dorans_ring -> :dorans_ring:")
+        return
+        # print(str(ctx.message.author))
+        # if await ut.troll_user(ctx) is True:
+        #     return
 
         # When not enough arguments were passed
         if len(msgs) <= 1:
@@ -40,21 +44,29 @@ class LolCommands(commands.Cog):
         if msgs[1] == "west" or msgs[1] == "euwest":
             msgs[1] = "euw"
 
-        if msgs[1] not in self.opgg.servers:
-            lol_server = "eune"
-        elif msgs[1] in self.opgg.servers:
-            # Check if user put only the server e.g: "$lol euw"
+        if msgs[1] not in self.opgg.regions:
+            region = "eune"
+            offset = 1
+        elif msgs[1] in self.opgg.regions:
+            # Check if user put only the region e.g: "$lol euw"
             if len(msgs) == 2:
                 return
-            lol_server = msgs[1]
+            region = msgs[1]
+            offset = 2
 
-        # Fetch summoner data
-        summoner = await self.opgg.fetch_summoner(summoner_name="".join(msgs[1:]), server=lol_server)
+        summoner_name = "".join(msgs[offset:])
+        try:
+            summoner = await self.riot_api.fetch_summoner(summoner_name, region)
+        except Exception as e:
+            print(e)
+            print("Riot api fetch failed, try web-crawling from opgg.")
+            # Fetch summoner data
+            summoner = await self.opgg.fetch_summoner(summoner_name, region)
 
         # Format them into emded
         em = LolCommands.create_summoner_embed(summoner)
 
-        # Send the embed to the server.
+        # Send the embed to the region.
         await ctx.send(content=None, embed=em)
 
 

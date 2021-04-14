@@ -10,6 +10,13 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Start: ChoBot",
+            "type": "python",
+            "request": "launch",
+            "program": "chobot.py",
+            "console": "integratedTerminal"
         }
     ]
 }

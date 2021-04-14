@@ -36,4 +36,4 @@ if __name__ == "__main__":
 
     load_cogs(bot, cogs_list)
 
-    bot.run(config("TOKEN"))
+    bot.run(config("CHOBOT_TOKEN"))
