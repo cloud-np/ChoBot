@@ -1,10 +1,4 @@
-import discord
-from decouple import config
-from random import randint
-
-
-trolled_users = list()
-
+from data.runes import RUNES
 
 def rspaces(text):
     return "".join(text.split())
@@ -34,17 +28,34 @@ def format_wr(texts):
 
 
 async def not_found(ctx):
-    if rspaces(str(ctx.message.author)) in trolled_users and randint(0, 10) > 1:
-        em = discord.Embed(title="Dead", description="Nai paraligo..")
-        em.set_image(url="https://i.imgur.com/uclAkDA.png")
-        await ctx.send(content=None, embed=em)
-        return True
+    # if rspaces(str(ctx.message.author)) in trolled_users and randint(0, 10) >", 1:
+    #     em = discord.Embed(title="Dead", description="Nai paraligo..")
+    #     em.set_image(url="https://i.imgur.com/uclAkDA.png")
+    #     await ctx.send(content=None, embed=em)
+    #     return True
     return False
 
 
-def setup(trolled_users_):
-    global trolled_users
-    trolled_users = trolled_users_
+def fr(rune_name):
+    return f"<:{rune_name}:{RUNES[rune_name]}>"
+
+
+def parse_summoner_name_and_region(user_input, valid_regions):
+
+    if user_input[1] == "west" or user_input[1] == "euwest":
+        user_input[1] = "euw"
+
+    if user_input[1] not in valid_regions:
+        region = "eune"
+        offset = 1
+    elif user_input[1] in valid_regions:
+        # Check if user put only the region e.g: "$lol euw"
+        if len(user_input) == 2:
+            return
+        region = user_input[1]
+        offset = 2
+    summoner_name = "".join(user_input[offset:])
+    return summoner_name, region
 
 
 def format_summoner(summoner_name, text):

@@ -6,23 +6,50 @@ import utils.utils as ut
 from bs4 import BeautifulSoup
 
 
-class OpggCrawler:
-    def __init__(self):
-        # The empty one -> '' is kr.
-        self.regions = ["eune", "euw", "na", "", "oce", "br", "tr"]
-        self.base_url = config("OPGG_BASE_URL")
-        self.summoner_url = config("OPGG_SUMMONER_URL")
-        self.champion_url = config("OPGG_CHAMPION_URL")
-        self.profile_icons = config("OPGG_PROFILE_ICON_URL")
-        self.elo_icons_url = config("OPGG_ELO_ICON_URL")
-        self.champion_icon_url = config("OPGG_CHAMPION_ICON_URL")
+class LolCrawler:
 
+    def __init__(self):
+        self.regions = ["eune", "euw", "na", "kr", "oce", "br", "tr"]
+        self.opgg = OpggCrawler()
+
+    async def fetch_summoner(self, summoner_name, region="EUNE", rank_type="Ranked Solo"):
+        try:
+            return await self.opgg.fetch_summoner(summoner_name, region, rank_type)
+        except Exception as e:
+            print(e)
+            print("Failed to fetch summoner from OPGG.")
+
+
+class Crawler:
     @staticmethod
     async def fetch(url):
         async with aiohttp.ClientSession() as session:
             response = await session.get(url)
             html = await response.text()
             return html
+
+
+class UggCrawler:
+    def __init__(self):
+        # We can still use OPGG's links to get images etc for the time being
+        # since these are static data across platoforms. Also we should cache
+        # these data at one point so we can retrieve them much faster.
+        self.base_url = config("OPGG_BASE_URL")
+        self.summoner_url = config("OPGG_SUMMONER_URL")
+        self.champion_url = config("UGG_CHAMPION_URL")
+        self.profile_icons = config("OPGG_PROFILE_ICON_URL")
+        self.elo_icons_url = config("OPGG_ELO_ICON_URL")
+        self.champion_icon_url = config("OPGG_CHAMPION_ICON_URL")
+
+
+class OpggCrawler:
+    def __init__(self):
+        self.base_url = config("OPGG_BASE_URL")
+        self.summoner_url = config("OPGG_SUMMONER_URL")
+        self.champion_url = config("OPGG_CHAMPION_URL")
+        self.profile_icons = config("OPGG_PROFILE_ICON_URL")
+        self.elo_icons_url = config("OPGG_ELO_ICON_URL")
+        self.champion_icon_url = config("OPGG_CHAMPION_ICON_URL")
 
     @staticmethod
     def find_kda(kda_soup):
@@ -101,12 +128,10 @@ class OpggCrawler:
 
         return {"elo_icon": "http:" + img, "win_ratio": win_ratio, "elo": elo}
 
-    async def fetch_summoner(
-        self, summoner_name, region="eune", rank_type="Ranked Solo"
-    ):
+    async def fetch_summoner(self, summoner_name, region, rank_type):
         print("summoner: " + summoner_name)
         print("region: " + region)
-        page = await self.fetch(self.summoner_url.replace("$region", region.lower()) + summoner_name.replace(" ", "%20"))
+        page = await Crawler.fetch(self.summoner_url.replace("$REGION", region.lower()) + summoner_name.replace(" ", "%20"))
         soup = BeautifulSoup(page, "html.parser")
 
         # Most played champions
