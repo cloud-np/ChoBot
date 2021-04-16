@@ -1,5 +1,6 @@
 from data.runes import RUNES
 
+
 def rspaces(text):
     return "".join(text.split())
 
@@ -38,6 +39,27 @@ async def not_found(ctx):
 
 def fr(rune_name):
     return f"<:{rune_name}:{RUNES[rune_name]}>"
+
+
+def extract_rune_from_url(url):
+    # We reverse the string to find the first occurance of the "/" char.
+    pos = None
+    for i, ch in enumerate(url[::-1]):
+        if ch == "/":
+            pos = i
+            break
+    return url[-pos:].replace(".png", "")
+
+
+def extract_url_from_style_attr(div_style):
+    s_pos = e_pos = None
+    for i, ch in enumerate(div_style):
+        if ch == "(":
+            s_pos = i
+        if ch == ")":
+            e_pos = i
+            break
+    return div_style[s_pos + 1:e_pos]
 
 
 def parse_summoner_name_and_region(user_input, valid_regions):
