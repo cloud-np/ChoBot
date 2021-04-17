@@ -38,6 +38,7 @@ async def not_found(ctx):
 
 
 def fr(rune_name):
+    rune_name = rune_name.lower()
     return f"<:{rune_name}:{RUNES[rune_name]}>"
 
 

@@ -12,21 +12,35 @@ class LolCommands(commands.Cog):
         self.lol_crawler = LolCrawler()
 
     @staticmethod
+    def not_found_build(build: dict):
+        em = discord.Embed(description=f'No builds found for {build["name"]} - {build["lane"]}', color=0x7C45A1)
+        em.set_author(name="Not found\t\t (╯°□°）╯︵ ┻━┻")
+        em.set_thumbnail(url=build["icon"])
+        return em
+
+    @staticmethod
     def create_build_embed(build, position):
-        em = discord.Embed(description=f"{build.win_ratio} {build.champ_tier}", color=0x7C45A1)
+        em = discord.Embed(
+            description=f"{build.win_ratio} {build.champ_tier}", color=0x7C45A1
+        )
         em.set_author(name=build.champ_name, icon_url=build.champ_icon)
         em.set_thumbnail(url=build.champ_icon)
 
-        # TODO Future Market
-        primaries = "".join([f' {ut.fr(ut.rspaces(prune.replace(":", "").lower()))} ' for prune in build.runes.primaries])
-        secondaries = "".join([f' {ut.fr(ut.rspaces(srune.replace(":", "").lower()))} ' for srune in build.runes.secondaries])
-        stats = "".join([f" {ut.fr(ut.rspaces(stat.lower()))} " for stat in build.runes.stats])
+        runes = build.runes
+        stats = runes.emojify_stats()
+        keystone, prim, secon = runes.emojify_runes()
+        types = runes.emojify_rune_types()
+        summoners = runes.emojify_summoners()
 
-        em.add_field(name=f"{build.runes.types[0]} {ut.fr(build.runes.types[0].lower())} ", value=f"{ut.fr(ut.rspaces(build.runes.keystone.lower()))}  ||  {primaries}", inline=True)
-        em.add_field(name=f"{build.runes.types[1]} {ut.fr(build.runes.types[1].lower())} ", value=secondaries, inline=True)
-        em.add_field(name="Skill Priotity", value="".join([spell + " -> " for spell in build.skills_priority]), inline=False)
+        em.add_field(name=types[0], value=f"{keystone}  ||  {prim}", inline=True)
+        em.add_field(name=types[1], value=secon, inline=True)
+        em.add_field(
+            name="Skill Priotity",
+            value="".join([spell + " -> " for spell in build.skills_priority]),
+            inline=False,
+        )
         em.add_field(name="Stats", value=stats, inline=True)
-        em.add_field(name="Summoners", value=ut.fr(build.runes.summoners[0][0].lower()) + " " + ut.fr(build.runes.summoners[1][0].lower()), inline=True)
+        em.add_field(name="Summoners", value=summoners, inline=True)
         counters = ""
         for ctr in build.counters:
             tmp = ctr.split(" Win Ratio ")
@@ -45,7 +59,16 @@ class LolCommands(commands.Cog):
         if len(msgs) <= 1:
             return
 
-        if msgs[1].lower() in ["top", "jungle", "mid", "middle", "bot", "adc", "support", "supp"]:
+        if msgs[1].lower() in [
+            "top",
+            "jungle",
+            "mid",
+            "middle",
+            "bot",
+            "adc",
+            "support",
+            "supp",
+        ]:
             if msgs[1] in ["mid", "middle"]:
                 lane = "middle"
             elif msgs[1] in ["bot", "adc"]:
@@ -60,8 +83,12 @@ class LolCommands(commands.Cog):
             offset = 1
 
         champion_name = "".join(msgs[offset:])
-        champion = await self.lol_crawler.fetch_champion(champion_name, lane)
-        embed = LolCommands.create_build_embed(champion, lane)
+        build = await self.lol_crawler.fetch_build(champion_name, lane)
+        embed = (
+            LolCommands.not_found_build(build)
+            if build.__class__ == dict
+            else LolCommands.create_build_embed(build, lane)
+        )
         # embed = LolCommands.create_build_embed(None, None)
         await ctx.send(embed=embed)
         # em = discord.Embed(title="Cho Gath", description="Mid-lane Build")

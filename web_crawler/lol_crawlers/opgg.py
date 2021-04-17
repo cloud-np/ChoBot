@@ -110,10 +110,7 @@ class OpggCrawler:
     async def fetch_summoner(self, summoner_name, region, rank_type):
         print("summoner: " + summoner_name)
         print("region: " + region)
-        page = await Crawler.fetch(
-            self.summoner_url.replace("$REGION", region.lower())
-            + summoner_name.replace(" ", "%20")
-        )
+        page = await Crawler.fetch(f'{self.summoner_url.replace("$REGION", region.lower())}{summoner_name.replace(" ", "%20")}')
         soup = BeautifulSoup(page, "html.parser")
 
         # Most played champions
@@ -146,9 +143,12 @@ class OpggCrawler:
 
     @staticmethod
     def find_champion_stats_rank(soup):
-        win_ratio = soup.find("div", class_="champion-stats-trend-rate").text
-        text = soup.find("div", class_="champion-stats-trend-average").text
-        return f"{ut.rss(win_ratio)} {ut.rss(text)}"
+        win_ratio = ut.rss(soup.find("div", class_="champion-stats-trend-rate").text)
+        text = ut.rss(soup.find("div", class_="champion-stats-trend-average").text)
+
+        if win_ratio == "%":
+            return None
+        return f"{win_ratio} {text}"
 
     @staticmethod
     def find_runes(soup):
@@ -243,18 +243,30 @@ class OpggCrawler:
         )
         soup = BeautifulSoup(page, "html.parser")
 
-        # Champion Icon
+        # These are the least to fail
+        # Champion Icon - Champion Name
         icon = f'https:{soup.find("div", class_="champion-stats-header-info__image").img["src"]}'
+        champion_name = soup.find("h1", class_="champion-stats-header-info__name").text
 
         # Lane
-        lane = soup.find("span", class_="champion-stats-header__position__role").text
+        lane = lane if lane != "" else soup.find("span", class_="champion-stats-header__position__role").text
 
-        # Champion Name - Tier
-        champion_name = soup.find("h1", class_="champion-stats-header-info__name").text
-        tier = soup.find("div", class_="champion-stats-header-info__tier").b.text
+        # If the page is empty return just the basic info
+        if soup.find("td", class_="champion-overview__data") is None:
+            return {"icon": icon, "name": champion_name, "lane": lane}
+
+        # Tier
+        try:
+            tier = soup.find("div", class_="champion-stats-header-info__tier").b.text
+        except Exception:
+            print(f"Could not find Champion tier for {champion_name} at {lane}")
+            tier = ''
 
         # Winratio/games
         win_ratio = OpggCrawler.find_champion_stats_rank(soup)
+
+        if win_ratio is None:
+            win_ratio = "Not enough games for stats follow build with caution"
 
         # Runes
         runes = OpggCrawler.find_runes(soup)

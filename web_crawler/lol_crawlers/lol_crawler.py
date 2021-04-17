@@ -17,7 +17,7 @@ class LolCrawler:
             print(e)
             print("Failed to fetch summoner from OPGG.")
 
-    async def fetch_champion(self, champion_name, lane=""):
+    async def fetch_build(self, champion_name, lane=""):
         return await self.opgg.fetch_build(champion_name, lane)
         try:
             pass
