@@ -8,19 +8,8 @@ class LolCrawler:
         self.opgg = OpggCrawler()
         self.ugg = UggCrawler()
 
-    async def fetch_summoner(
-        self, summoner_name, region="EUNE", rank_type="Ranked Solo"
-    ):
-        try:
-            return await self.opgg.fetch_summoner(summoner_name, region, rank_type)
-        except Exception as e:
-            print(e)
-            print("Failed to fetch summoner from OPGG.")
+    async def fetch_summoner(self, summoner_name, region="EUNE", rank_type="Ranked Solo"):
+        return await self.opgg.fetch_summoner(summoner_name, region, rank_type)
 
     async def fetch_build(self, champion_name, lane=""):
         return await self.opgg.fetch_build(champion_name, lane)
-        try:
-            pass
-        except Exception as e:
-            print(e)
-            print("Failed to fetch summoner from UGG.")

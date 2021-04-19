@@ -10,19 +10,18 @@ class LolCommands(commands.Cog):
         self.bot = bot
         self.riot_api = RiotApi()
         self.lol_crawler = LolCrawler()
+        self.lanes = ["top", "jungle", "mid", "middle", "bot", "adc", "support", "supp"]
 
     @staticmethod
     def not_found_build(build: dict):
-        em = discord.Embed(description=f'No builds found for {build["name"]} - {build["lane"]}', color=0x7C45A1)
-        em.set_author(name="Not found\t\t (╯°□°）╯︵ ┻━┻")
+        em = discord.Embed(description=f'No builds were found for {build["name"]} - {build["lane"]}', color=0x7C45A1)
+        em.set_author(name="Not found\t (╯°□°）╯︵ ┻━┻")
         em.set_thumbnail(url=build["icon"])
         return em
 
     @staticmethod
-    def create_build_embed(build, position):
-        em = discord.Embed(
-            description=f"{build.win_ratio} {build.champ_tier}", color=0x7C45A1
-        )
+    def create_build_embed(build):
+        em = discord.Embed(title=build.champ_name + " " + build.lane, description=f"{build.win_ratio} {build.champ_tier}", color=0x7C45A1)
         em.set_author(name=build.champ_name, icon_url=build.champ_icon)
         em.set_thumbnail(url=build.champ_icon)
 
@@ -51,6 +50,43 @@ class LolCommands(commands.Cog):
         em.set_footer(text=f"This build is for {build.lane} {build.champ_name}")
         return em
 
+    @staticmethod
+    def not_valid_url(user_input, msg):
+        em = discord.Embed(title="Invalid Input", description=msg, color=0x7C45A1)
+        em.add_field(name=f"**{user_input}**", value='.')
+        return em
+
+    @staticmethod
+    async def show_build(build, ctx):
+        # em = discord.Embed(title=build.champ_name + " " + build.lane, description=f"{build.win_ratio} {build.champ_tier}", color=0x7C45A1)
+
+        starting = build.item_build.start[0]
+        s_stats = "".join(s + " " for s in starting['stats'][2:])
+        em = discord.Embed(title="Starting Items", description=s_stats, color=0x7C45A1)
+
+        for icon in starting['icons']:
+            em.set_image(url=icon)
+            await ctx.send(embed=em)
+            em.description = " "
+
+        core = build.item_build.core_build[0]
+        c_stats = "".join(s + " " for s in core['stats'][2:])
+        em = discord.Embed(title="Core Items", description=c_stats, color=0x7C45A1)
+
+        for icon in build.item_build.core_build[0]['icons']:
+            em.set_image(url=icon)
+            await ctx.send(embed=em)
+            em.description = " "
+
+        boots = build.item_build.boots[0]
+        b_stats = "".join(s + " " for s in boots['stats'][2:])
+        em = discord.Embed(title="Boots", description=b_stats, color=0x7C45A1)
+
+        for icon in build.item_build.boots[0]['icons']:
+            em.set_image(url=icon)
+            await ctx.send(embed=em)
+            em.description = " "
+
     @commands.command(pass_context=True)
     async def build(self, ctx):
         msgs = ctx.message.content.split()
@@ -59,16 +95,7 @@ class LolCommands(commands.Cog):
         if len(msgs) <= 1:
             return
 
-        if msgs[1].lower() in [
-            "top",
-            "jungle",
-            "mid",
-            "middle",
-            "bot",
-            "adc",
-            "support",
-            "supp",
-        ]:
+        if msgs[1].lower() in self.lanes:
             if msgs[1] in ["mid", "middle"]:
                 lane = "middle"
             elif msgs[1] in ["bot", "adc"]:
@@ -83,17 +110,28 @@ class LolCommands(commands.Cog):
             offset = 1
 
         champion_name = "".join(msgs[offset:])
+
+        # Fetch the build from a website.
         build = await self.lol_crawler.fetch_build(champion_name, lane)
-        embed = (
-            LolCommands.not_found_build(build)
-            if build.__class__ == dict
-            else LolCommands.create_build_embed(build, lane)
-        )
-        # embed = LolCommands.create_build_embed(None, None)
+
+        if build is None:
+            embed = LolCommands.not_valid_url(user_input=champion_name, msg="Are you sure this is a valid champion?")
+            # ouch_gif = discord.File("data/ouch.gif", filename="ouch.gif")
+        elif build.__class__ == dict:
+            embed = LolCommands.not_found_build(build)
+            # sad_gif = discord.File("data/sad.gif", filename="sad.gif")
+        else:
+            embed = LolCommands.create_build_embed(build)
+            await LolCommands.show_build(build, ctx)
+            # await ctx.send("".join("".join(icon + " " for icon in items['icons']) for items in build.item_build.start))
+
         await ctx.send(embed=embed)
-        # em = discord.Embed(title="Cho Gath", description="Mid-lane Build")
-        # em.add_field(name="", value="", inline=True)
-        # await ctx.send(embed=em)
+
+        # if build.__class__ == dict:
+        #     await ctx.send(file=sad_gif)
+        # elif build is None:
+        #     await ctx.send(file=ouch_gif)
+
         return
 
     @staticmethod
@@ -120,9 +158,7 @@ class LolCommands(commands.Cog):
         if len(msgs) <= 1:
             return
 
-        summoner_name, region = ut.parse_summoner_name_and_region(
-            msgs, self.lol_crawler.regions
-        )
+        summoner_name, region = ut.parse_summoner_name_and_region(msgs, self.lol_crawler.regions)
         # Once champion.gg api is back we may use this again.
         # try:
         #     summoner = await self.riot_api.fetch_summoner(summoner_name, region)
@@ -131,8 +167,11 @@ class LolCommands(commands.Cog):
         #     print("Riot api fetch failed, try web-crawling from opgg.")
 
         summoner = await self.lol_crawler.fetch_summoner(summoner_name, region)
-        # Format them into emded
-        em = LolCommands.create_summoner_embed(summoner)
+        if summoner is None:
+            em = LolCommands.not_valid_url(user_input=summoner_name, msg="Are you sure this is a valid summoner?\n\t\tDid you select the right server?")
+        else:
+            # Format them into emded
+            em = LolCommands.create_summoner_embed(summoner)
 
         # Send the embed to the region.
         await ctx.send(content=None, embed=em)

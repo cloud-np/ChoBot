@@ -101,17 +101,19 @@ class OpggCrawler:
         elo = tier_box.find("div", class_="TierRank").text
         win_ratio = ""
 
-        if elo != "Unranked":
+        if ut.rss(elo) != "Unranked":
             elo += " " + ut.rss(tier_info.find("span", class_="LeaguePoints").text)
             win_ratio = OpggCrawler.find_win_ratio(tier_info)
 
         return {"elo_icon": "http:" + img, "win_ratio": win_ratio, "elo": elo}
 
     async def fetch_summoner(self, summoner_name, region, rank_type):
-        print("summoner: " + summoner_name)
-        print("region: " + region)
+        print(f"summoner: {summoner_name} region: {region}")
         page = await Crawler.fetch(f'{self.summoner_url.replace("$REGION", region.lower())}{summoner_name.replace(" ", "%20")}')
         soup = BeautifulSoup(page, "html.parser")
+
+        if soup.find("div", class_="SummonerNotFoundLayout") is not None:
+            return None
 
         # Most played champions
         champions = OpggCrawler.find_champions(soup)
@@ -233,8 +235,7 @@ class OpggCrawler:
         )
 
     async def fetch_build(self, champion_name, lane=""):
-        print("champion: " + champion_name)
-        print(f"lane: {lane}")
+        print(f"champion: {champion_name} lane: {lane}")
 
         page = await Crawler.fetch(
             self.champion_url.replace("$CHAMPION", champion_name.lower()).replace(
@@ -242,6 +243,11 @@ class OpggCrawler:
             )
         )
         soup = BeautifulSoup(page, "html.parser")
+
+        # This means we got redirected somewhere else
+        # Because the champion does not exist
+        if len(soup.find_all("input")) != 1:
+            return None
 
         # These are the least to fail
         # Champion Icon - Champion Name
