@@ -63,6 +63,10 @@ def extract_url_from_style_attr(div_style):
     return div_style[s_pos + 1:e_pos]
 
 
+def format_stats(stats):
+    return f"**{stats[0]}** `Pick-Rate` **{stats[1]}** `Games` **{stats[2]}** `Win-Ratio`"
+
+
 def parse_champion_name_and_lane(user_input, lanes):
 
     if user_input[1].lower() in lanes:

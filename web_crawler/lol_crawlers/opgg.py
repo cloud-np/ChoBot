@@ -226,7 +226,8 @@ class OpggCrawler:
                 boots_pos = i
 
         if boots_pos == -1 or recommended_pos == -1:
-            raise Exception("Could not found Recommend or Boots in items list.")
+            return None
+            # raise Exception("Could not found Recommend or Boots in items list.")
 
         return ItemBuild(
             start_items=items[0:recommended_pos],
@@ -285,6 +286,8 @@ class OpggCrawler:
 
         # Item Build
         item_build = OpggCrawler.find_item_build(soup)
+        if item_build is None:
+            return {"icon": icon, "name": champion_name, "lane": lane}
 
         # summoner = Summoner(name=summoner_name, region=region)
         return ChampionBuild(
