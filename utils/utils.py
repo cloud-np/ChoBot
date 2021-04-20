@@ -63,6 +63,26 @@ def extract_url_from_style_attr(div_style):
     return div_style[s_pos + 1:e_pos]
 
 
+def parse_champion_name_and_lane(user_input, lanes):
+
+    if user_input[1].lower() in lanes:
+        if user_input[1] in ["mid", "middle"]:
+            lane = "middle"
+        elif user_input[1] in ["bot", "adc"]:
+            lane = "adc"
+        elif user_input[1] in ["support", "supp"]:
+            lane = "support"
+
+        lane = user_input[1]
+        offset = 2
+    else:
+        lane = ""
+        offset = 1
+
+    champion_name = "".join(user_input[offset:])
+    return champion_name, lane
+
+
 def parse_summoner_name_and_region(user_input, valid_regions):
 
     if user_input[1] == "west" or user_input[1] == "euwest":

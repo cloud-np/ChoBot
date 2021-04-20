@@ -88,6 +88,10 @@ class LolCommands(commands.Cog):
             em.description = " "
 
     @commands.command(pass_context=True)
+    async def runes(self, ctx):
+        pass
+
+    @commands.command(pass_context=True)
     async def build(self, ctx):
         msgs = ctx.message.content.split()
 
@@ -95,42 +99,20 @@ class LolCommands(commands.Cog):
         if len(msgs) <= 1:
             return
 
-        if msgs[1].lower() in self.lanes:
-            if msgs[1] in ["mid", "middle"]:
-                lane = "middle"
-            elif msgs[1] in ["bot", "adc"]:
-                lane = "adc"
-            elif msgs[1] in ["support", "supp"]:
-                lane = "support"
-
-            lane = msgs[1]
-            offset = 2
-        else:
-            lane = ""
-            offset = 1
-
-        champion_name = "".join(msgs[offset:])
+        champion_name, lane = ut.parse_summoner_name_and_region(msgs, self.lanes)
 
         # Fetch the build from a website.
         build = await self.lol_crawler.fetch_build(champion_name, lane)
 
         if build is None:
             embed = LolCommands.not_valid_url(user_input=champion_name, msg="Are you sure this is a valid champion?")
-            # ouch_gif = discord.File("data/ouch.gif", filename="ouch.gif")
         elif build.__class__ == dict:
             embed = LolCommands.not_found_build(build)
-            # sad_gif = discord.File("data/sad.gif", filename="sad.gif")
         else:
-            embed = LolCommands.create_build_embed(build)
+            embed = LolCommands.create_runes_embed(build)
             await LolCommands.show_build(build, ctx)
-            # await ctx.send("".join("".join(icon + " " for icon in items['icons']) for items in build.item_build.start))
 
         await ctx.send(embed=embed)
-
-        # if build.__class__ == dict:
-        #     await ctx.send(file=sad_gif)
-        # elif build is None:
-        #     await ctx.send(file=ouch_gif)
 
         return
 
