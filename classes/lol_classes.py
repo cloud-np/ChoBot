@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import utils.utils as ut
-from typing import List
 
 
 @dataclass(frozen=True, order=True)

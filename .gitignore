@@ -1,5 +1,5 @@
-venv/
 .env
+chobot-env/
 __pycache__/
 .ropeproject
 Testing/
